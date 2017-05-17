@@ -21,28 +21,3 @@ class Expando(object):
 
     def __setitem__(self, key, value):
         return self.__setattr__(str(key), value)
-
-
-if __name__ == "__main__":
-    obj = Expando(_89='opm', kiki=9)
-    obj2 = Expando.from_dict({89:'opm2', 'kiki':90})
-    print(vars(obj2))
-
-    print(vars(obj))
-
-    for k, v in obj:
-        print(str(k) + " : " + str(v))
-
-    print(obj[0])
-    obj[0] = 0
-    print(obj[0])
-
-    print(obj['_89'])
-
-    obj['_90'] = 90
-
-    print(obj._90)
-
-    obj._91 = 91
-
-    print(vars(obj))

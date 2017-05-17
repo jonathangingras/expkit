@@ -1,0 +1,33 @@
+#PYTHON=python
+#LATEX=pdflatex
+#RESULT_DIR=__results__
+#EXPERIMENTS_CFG=experiments.py
+#RESULTS_CFG=results.py
+#OPEN_CMD=open
+#TARGET=$(RESULT_DIR)/document.pdf
+
+
+all: $(TARGET)
+
+
+.PHONY: open clean
+
+clean:
+	rm -rf $(RESULT_DIR)
+
+open: $(TARGET)
+	$(OPEN_CMD) $<
+
+
+$(RESULT_DIR)/experiments_done: $(EXPERIMENTS_CFG)
+	$(PYTHON) $<
+	touch $@
+
+$(RESULT_DIR)/results_outputed: $(RESULTS_CFG) $(RESULT_DIR)/experiments_done
+	$(PYTHON) $<
+	touch $@
+
+%.pdf: $(RESULT_DIR)/results_outputed
+	$(LATEX) $(RESULT_DIR)/$(patsubst %.pdf,%.tex,$(notdir $@))
+	mv $(notdir $@) $(dir $@)
+	rm -f *.log *.aux *.out
