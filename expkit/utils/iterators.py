@@ -1,3 +1,7 @@
+def iterable(obj):
+    return callable(getattr(obj, "__iter__", None))
+
+
 class BaseMixin(object):
     def __init__(self, iterable, except_any=False):
         self.iterable = iterable

@@ -28,7 +28,7 @@ def write_tex_table(filepath, dataframe, adjust_width=0, **kwargs):
 
 
 def include_texinput(filepath, file=None):
-    file.write(r"\input{" + filepath + "}\n")
+    file.write(r"\input{" + os.path.basename(filepath) + "}\n")
 
 
 def include_pdfinput(filepath, file=None, adjust_width=0):
@@ -38,7 +38,7 @@ def include_pdfinput(filepath, file=None, adjust_width=0):
         """)
 
     file.write(r"\makebox[\textwidth]{\includegraphics[width=\paperwidth]{{" + \
-               filepath[:-4] + \
+               os.path.basename(filepath)[:-4] + \
                "}.pdf}}\n")
 
     file.write(r"""
