@@ -1,11 +1,9 @@
-import os
+import pkg_resources
 from ..config import Config
 
 
 def makefile_path():
-    return os.path.realpath(
-        os.path.join(__file__, "..", "..", "..", "resources", "expkit_makefile")
-    )
+    return pkg_resources.resource_filename('expkit.resources', 'expkit_makefile')
 
 
 def makefile_vars_from_config(config):

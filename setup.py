@@ -11,5 +11,6 @@ setup(
     author_email="jonathan.gingras.1@gmail.com",
     url="https://github.com/jonathangingras/expkit",
     license=license,
-    packages=find_packages(exclude=('tests', 'docs'))
+    packages=find_packages(exclude=('docs', 'tests', 'tests.*')),
+    package_data={'resources': '*'}
 )
