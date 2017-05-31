@@ -12,5 +12,5 @@ setup(
     url="https://github.com/jonathangingras/expkit",
     license=license,
     packages=find_packages(exclude=('docs', 'tests', 'tests.*')),
-    package_data={'resources': '*'}
+    package_data={'resources': '*.mk'}
 )

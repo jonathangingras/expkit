@@ -3,7 +3,7 @@ from ..config import Config
 
 
 def makefile_path():
-    return pkg_resources.resource_filename('expkit.resources', 'expkit_makefile')
+    return pkg_resources.resource_filename('expkit.resources', 'expkit_makefile.mk')
 
 
 def makefile_vars_from_config(config):
