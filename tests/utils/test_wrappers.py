@@ -1,5 +1,5 @@
 from unittest import TestCase
-from expkit.utils.wrappers import LearnerWrapper, is_wrapper, unwrapped
+from expkit.wrapper import LearnerWrapper, is_wrapper, unwrapped
 
 
 class SomeWrapper(LearnerWrapper):
