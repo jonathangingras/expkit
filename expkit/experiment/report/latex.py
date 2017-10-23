@@ -73,6 +73,6 @@ def write_default_main_tex(filepath):
 
     with open(filepath, "w") as f:
         f.write(header)
-        each(find_intex_files(os.path.dirname(filepath)))(include_texinput, file=f)
-        each(find_inpdf_files(os.path.dirname(filepath)))(include_pdfinput, file=f)
+        each(find_intex_files(os.path.dirname(filepath)), sort_elements=True)(include_texinput, file=f)
+        each(find_inpdf_files(os.path.dirname(filepath)), sort_elements=True)(include_pdfinput, file=f)
         f.write(footer)

@@ -1,5 +1,5 @@
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, fbeta_score, confusion_matrix
-from ..utils.wrappers import is_wrapper, unwrapped
+from ..wrapper.operators import is_wrapper, unwrapped
 import numpy as np
 
 

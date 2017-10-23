@@ -3,9 +3,10 @@ def iterable(obj):
 
 
 class BaseMixin(object):
-    def __init__(self, iterable, except_any=False):
+    def __init__(self, iterable, except_any=False, sort_elements=False):
         self.iterable = iterable
         self.except_any = except_any
+        self.sort_elements = sort_elements
 
     def _in_generate(self, i, function, *args, **kwargs):
         try:
@@ -18,7 +19,11 @@ class BaseMixin(object):
         return self.iterable
 
     def generate(self, function, *args, **kwargs):
-        for i in self._iterable():
+        if self.sort_elements:
+            iterable = sorted(self._iterable())
+        else:
+            iterable = self._iterable()
+        for i in iterable:
             ret = self._in_generate(i, function, *args, **kwargs)
             if ret is not None:
                 yield ret

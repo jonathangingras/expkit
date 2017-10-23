@@ -1,5 +1,5 @@
 import multiprocessing as mp
-from .wrappers import star_wrap
+from .arguments import star_wrap
 
 
 def pmap(function, iterable, n_jobs=-1):
