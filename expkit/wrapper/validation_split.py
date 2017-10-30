@@ -5,8 +5,9 @@ from ..experiment.dataset import Dataset
 
 
 class TrainValidationCVWrapper(CVWrapper):
-    def __init__(self, estimator_class, **kwargs):
+    def __init__(self, estimator_class, *args, **kwargs):
         self.estimator_class = estimator_class
+        self.args = args
         self.kwargs = kwargs
 
 
@@ -22,7 +23,7 @@ class TrainValidationCVWrapper(CVWrapper):
         valid = Dataset(X["valid"], y["valid"], X["feature_names"])
         alldata = train.merge(valid)
 
-        super().__init__(estimator_class=self.estimator_class, cv=self.create_predefined_split(train, valid), **self.kwargs)
+        super().__init__(self.estimator_class, *self.args, cv=self.create_predefined_split(train, valid), **self.kwargs)
         super().fit(alldata.X, alldata.y)
 
 
