@@ -14,9 +14,9 @@ class LearnerWrapper(object):
         return True
 
 
-    def __wrapped__(self):
+    def __wrapped__(self, *args, **kwargs):
         if not self.wrapped:
-            self.wrapped = self.estimator_class(*self.args, **self.kwargs)
+            self.wrapped = self.estimator_class(*args, *self.args, **kwargs, **self.kwargs)
         return self.wrapped
 
 

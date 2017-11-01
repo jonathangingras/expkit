@@ -5,27 +5,25 @@ import torch
 import torch.utils.data
 
 
-def create_model_loss_optimizer(model, loss_class, optimizer_class,
-                                loss_params={}, optimizer_params={'lr': 0.1}):
-    loss = loss_class(**loss_params)
-    optimizer = optimizer_class(model.parameters(), **optimizer_params)
-    return model, loss, optimizer
-
-
-
 class NeuralNetwork(object):
     def __init__(self,
                  model,
-                 loss,
-                 optimizer,
-                 n_epochs=500,
+                 loss_function_class,
+                 optimizer_class,
+
+                 loss_function_params={},
+                 optimizer_params={'lr': 0.1},
+
+                 n_epochs=200,
                  batch_size=64,
+
                  n_jobs=-1,
                  log=sys.stdout,
                  use_gpu=True):
+
         self.model = model
-        self.loss = loss
-        self.optimizer = optimizer
+        self.loss = loss_function_class(**loss_function_params)
+        self.optimizer = optimizer_class(self.model.parameters(), **optimizer_params)
 
         self.n_epochs = n_epochs
         self.batch_size = batch_size
