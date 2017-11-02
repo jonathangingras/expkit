@@ -120,8 +120,6 @@ class ExperimentSetup(object):
             "configs": self.configs,
         }
 
-        print(self.result_producers())
-
         each(self.result_producers())(lambda producer: producer(self, results))
 
         return results
