@@ -8,17 +8,23 @@ from .dataset import Dataset
 from .result_producers import save_learner_object, apply_feature_names
 
 
+# source https://stackoverflow.com/questions/3655842/how-can-i-test-whether-a-variable-holds-a-lambda
+def islambda(v):
+  LAMBDA = lambda:0
+  return isinstance(v, type(LAMBDA)) and v.__name__ == LAMBDA.__name__
+
+
 def assert_not_in_main_module(possible_callable):
     if not callable(possible_callable):
         return possible_callable
     else:
-        if possible_callable.__module__ == "__main__":
+        if not islambda(possible_callable) and possible_callable.__module__ == "__main__":
             raise RuntimeError("A callable living in main module is not pickleable")
         else:
             return possible_callable
 
 
-def __all_not_NoneType(*args):
+def all_not_NoneType(*args):
     for element in args:
         if isinstance(element, None.__class__):
             return False
@@ -30,9 +36,9 @@ def _experiment_time():
 
 
 def get_valid_dataset(dict_contained_object):
-    if __all_not_NoneType(getattr(dict_contained_object, "X", None),
-                          getattr(dict_contained_object, "y", None),
-                          getattr(dict_contained_object, "feature_names", None)):
+    if all_not_NoneType(getattr(dict_contained_object, "X", None),
+                        getattr(dict_contained_object, "y", None),
+                        getattr(dict_contained_object, "feature_names", None)):
         return dict_contained_object
 
     if isinstance(dict_contained_object, dict):
@@ -92,12 +98,14 @@ class ExperimentSetup(object):
 
 
     def learner_params(self):
-        return [] + self.fallback_access(self.configs, [])["params"]
+        params = {}
+        params.update(self.fallback_access(self.configs, {})["params"])
+        return params
 
 
     def run(self):
         begin_time = _experiment_time()
-        self.learner = self.learner_class()(*self.learner_params())
+        self.learner = self.learner_class()(**self.learner_params())
 
         self.train_dataset = get_valid_dataset(self.train_dataset)
         self.test_dataset = get_valid_dataset(self.test_dataset)
@@ -111,6 +119,8 @@ class ExperimentSetup(object):
             "finish_time": _experiment_time(),
             "configs": self.configs,
         }
+
+        print(self.result_producers())
 
         each(self.result_producers())(lambda producer: producer(self, results))
 
