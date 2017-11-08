@@ -7,7 +7,7 @@ from ..experiment import Dataset
 from .operators import unwrapped
 from .learner import LearnerWrapper
 from .onehot import OneHotClassifierWrapper
-from ..utils.conversion import collect_classes, per_sample_shape
+from ..utils.conversion import collect_classes, per_sample_shape, labels_to_one_hots
 
 
 class OneHotAbstractNeuralNetwork(object):
@@ -87,8 +87,8 @@ class OneHotAbstractNeuralNetwork(object):
         if not self.validation_dataset:
             return None
 
-        valid_pred = self.model(self.validation_dataset.X)
-        loss = self.loss(valid_pred, self.validation_dataset.y)
+        valid_pred = self.model(self.validation_dataset["X"])
+        loss = self.loss(valid_pred, self.validation_dataset["y"])
         return loss.data[0]
 
 
@@ -99,8 +99,10 @@ class OneHotAbstractNeuralNetwork(object):
 
 
     def register_validation_dataset(self, validation_dataset):
-        self.validation_dataset = Dataset(self.__to_variable(validation_dataset.X),
-                                          self.__to_variable(validation_dataset.y))
+        self.validation_dataset = {
+            "X": self.__to_variable(torch.from_numpy(validation_dataset.X)),
+            "y": self.__to_variable(torch.from_numpy(validation_dataset.y))
+        }
 
 
     def fit(self, X, y):
@@ -128,6 +130,7 @@ class OneHotAbstractNeuralNetwork(object):
 class AbstractNeuralNetwork(object):
     def __init__(self, *args, **kwargs):
         self.learner = LearnerWrapper(OneHotClassifierWrapper, OneHotAbstractNeuralNetwork, *args, **kwargs)
+        self.validation_dataset = None
 
 
     def get_model(self, input_dim, output_dim):
@@ -135,11 +138,19 @@ class AbstractNeuralNetwork(object):
 
 
     def register_validation_dataset(self, validation_dataset):
-        unwrapped(self.learner).register_validation_dataset(validation_dataset)
+        self.validation_dataset = validation_dataset
 
 
     def fit(self, X, y):
-        return unwrapped(self.learner, model=self.get_model(per_sample_shape(X), len(collect_classes(y)))).fit(X, y)
+        onehot = unwrapped(self.learner, model=self.get_model(per_sample_shape(X), len(collect_classes(y))))
+        onehot.collect_classes(y)
+        unwrapped(onehot).register_validation_dataset(
+            Dataset(
+                self.validation_dataset.X,
+                labels_to_one_hots(self.validation_dataset.y, onehot._classes, dtype=np.float32)
+            )
+        )
+        onehot.fit(X, y)
 
 
     def predict(self, X):
