@@ -43,6 +43,8 @@ class OneHotAbstractNeuralNetwork(object):
         if self.use_gpu:
             self.model = self.model.cuda()
 
+        self.validation_dataset = None
+
 
     def __to_variable(self, tensor):
         variable = torch.autograd.Variable(tensor)
