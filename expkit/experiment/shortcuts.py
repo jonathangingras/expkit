@@ -6,8 +6,7 @@ def create_experiment_setup(data, learners, learner_label, dataset_label, setup_
     configs = learners[learner_label]
 
     return setup_class(learner_label + '__' + dataset_label,
-                       data[dataset_label]['train'],
-                       data[dataset_label]['test'],
+                       data[dataset_label],
                        configs=configs)
 
 

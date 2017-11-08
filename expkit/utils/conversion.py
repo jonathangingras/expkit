@@ -5,6 +5,10 @@ def collect_classes(y):
     return np.array(list(set(y)))
 
 
+def per_sample_shape(X):
+    return np.array(X, copy=False).shape[1:]
+
+
 def label_to_one_hot(label, classes, dtype=np.float64):
     """
     y:       class label, for e.g. "positive"

@@ -11,3 +11,30 @@ class star_wrap(object):
             return self.function(*args, *self.additional_args)
         else:
             return self.function(args, *self.additional_args)
+
+
+# source https://stackoverflow.com/questions/3655842/how-can-i-test-whether-a-variable-holds-a-lambda
+def islambda(arg):
+  LAMBDA = lambda:0
+  return isinstance(arg, type(LAMBDA)) and arg.__name__ == LAMBDA.__name__
+
+
+def reject_keys(dictionnary, rejected_keys):
+  return { key: dictionnary[key] for key in filter(lambda key: key not in rejected_keys, dictionnary.keys()) }
+
+
+def null_function(*args, **kwargs):
+    pass
+
+
+class FallbackAccessor(object):
+    def __init__(self, accessed, fallback):
+        self.accessed = accessed
+        self.fallback = fallback
+
+
+    def __getitem__(self, *keys):
+        try:
+            return self.accessed.__getitem__(*keys)
+        except KeyError:
+            return self.fallback

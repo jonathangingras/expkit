@@ -1,17 +1,12 @@
 import os
 import pickle as pkl
-from time import gmtime, strftime
 import inspect
 from ..utils.comparison import DeepComparison
 from ..utils.iterators import each
+from ..utils.arguments import FallbackAccessor, reject_keys, islambda, null_function
+from ..format import Time
 from .dataset import Dataset
 from .result_producers import save_learner_object, apply_feature_names
-
-
-# source https://stackoverflow.com/questions/3655842/how-can-i-test-whether-a-variable-holds-a-lambda
-def islambda(v):
-  LAMBDA = lambda:0
-  return isinstance(v, type(LAMBDA)) and v.__name__ == LAMBDA.__name__
 
 
 def assert_not_in_main_module(possible_callable):
@@ -31,10 +26,6 @@ def all_not_NoneType(*args):
     return True
 
 
-def _experiment_time():
-    return strftime("%Y-%m-%d_%H.%M.%S", gmtime())
-
-
 def get_valid_dataset(dict_contained_object):
     if all_not_NoneType(getattr(dict_contained_object, "X", None),
                         getattr(dict_contained_object, "y", None),
@@ -52,31 +43,18 @@ def get_valid_dataset(dict_contained_object):
     raise RuntimeError("Invalid object passed as dataset")
 
 
-class FallbackAccessor(object):
-    def __init__(self, accessed, fallback):
-        self.accessed = accessed
-        self.fallback = fallback
-
-
-    def __getitem__(self, *keys):
-        try:
-            return self.accessed.__getitem__(*keys)
-        except KeyError:
-            return self.fallback
-
-
 class ExperimentSetup(object):
     def __init__(self,
                  label,
-                 train_dataset,
-                 test_dataset,
+                 datasets,
                  configs={}):
         if not inspect.isclass(configs["class"]):
             raise RuntimeError("learner_class parameter must be a class meeting sklearn interface")
 
         self.label = label
-        self.train_dataset = assert_not_in_main_module(train_dataset)
-        self.test_dataset = assert_not_in_main_module(test_dataset)
+        self.train_dataset = assert_not_in_main_module(datasets["train"])
+        self.test_dataset = assert_not_in_main_module(datasets["test"])
+        self.dataset_extra_params = reject_keys(datasets, ["train", "test"])
         self.configs = configs
 
         self.results = None
@@ -104,19 +82,23 @@ class ExperimentSetup(object):
 
 
     def run(self):
-        begin_time = _experiment_time()
+        begin_time = Time()
         self.learner = self.learner_class()(**self.learner_params())
 
         self.train_dataset = get_valid_dataset(self.train_dataset)
         self.test_dataset = get_valid_dataset(self.test_dataset)
 
+        self.fallback_access(self.configs, null_function)["before"](self)
+
         self.learner.fit(self.train_dataset.X, self.train_dataset.y)
         self.y_pred = self.learner.predict(self.test_dataset.X)
+
+        self.fallback_access(self.configs, null_function)["after"](self)
 
         results = {
             "experiment_label": self.label,
             "begin_time": begin_time,
-            "finish_time": _experiment_time(),
+            "finish_time": Time(),
             "configs": self.configs,
         }
 
@@ -142,6 +124,7 @@ class ExperimentSetup(object):
                     print("corrupted pickle")
         else:
             print("no existing pkl for " + self.label)
+            return None
 
 
     def __call__(self, result_dir=None):
