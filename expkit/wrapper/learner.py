@@ -7,8 +7,8 @@ class Event(object):
         self.args = args
         self.kwargs = kwargs
 
-    def __call__(self, emitter):
-        return self.callee(emitter, *self.args, **self.kwargs)
+    def __call__(self, emitter, *args, **kwargs):
+        return self.callee(emitter, *self.args, *args, **self.kwargs, **kwargs)
 
 
 class EventRegistry(object):
@@ -24,11 +24,14 @@ class EventRegistry(object):
             self.events.update({name: [event]})
 
 
-    def emit(self, name):
+    def emit(self, name, *args, **kwargs):
+        result = tuple()
+
         if name in self.events.keys():
-            return tuple(map(lambda event: event(self.emitter), self.events[name]))
-        else:
-            return tuple()
+            result = tuple(map(lambda event: event(self.emitter, *args, **kwargs), self.events[name]))
+            del self.events[name]
+
+        return result
 
 
 class LearnerWrapper(object):
@@ -40,6 +43,12 @@ class LearnerWrapper(object):
 
         self.wrapped = None
 
+        self.after_init()
+
+
+    def after_init(self):
+        self.events.register_event("unwrap", Event(lambda emitter: self.instantiate_estimator()))
+
 
     def register_event(self, name, event):
         self.events.register_event(name, event)
@@ -49,12 +58,15 @@ class LearnerWrapper(object):
         return True
 
 
-    def __wrapped__(self, *args, **kwargs):
+    def __wrapped__(self):
         self.events.emit("unwrap")
-        if not self.wrapped:
-            self.events.emit("estimator_instantiation")
-            self.wrapped = self.estimator_class(*args, *self.args, **kwargs, **self.kwargs)
         return self.wrapped
+
+
+    def instantiate_estimator(self, *args, **kwargs):
+        if self.wrapped is None:
+            self.events.emit("instantiation")
+            self.wrapped = self.estimator_class(*self.args, *args, **self.kwargs, **kwargs)
 
 
     def fit(self, X, y):

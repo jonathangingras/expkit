@@ -4,14 +4,21 @@ from .learner import LearnerWrapper, unwrapped
 
 
 class OneHotClassifierDecorator(object):
-    def __init__(self, learner):
+    def __init__(self, learner, emitter=None):
         self.learner = learner
+        self.emitter = emitter
         self._classes = None
 
 
     def collect_classes(self, y):
         if self._classes is None:
             self._classes = collect_classes(y)
+            if self.emitter is not None:
+                self.emitter.events.emit("classes_collected")
+
+
+    def get_classes(self):
+        return self._classes
 
 
     def fit(self, X, y):
@@ -28,21 +35,16 @@ class OneHotClassifierDecorator(object):
 
 
 class OneHotClassifierWrapper(LearnerWrapper):
-    def instantiate_decorator(self):
-        if not getattr(self, "_onehot_decorator", None):
-            self._onehot_decorator = OneHotClassifierDecorator(unwrapped(self))
+    def instantiate_estimator(self, *args, **kwargs):
+        if self.wrapped is None:
+            self.events.emit("instantiation")
+            self.wrapped = OneHotClassifierDecorator(self.estimator_class(*self.args, *args, **self.kwargs, **kwargs), self)
 
 
     def collect_classes(self, y):
-        self.instantiate_decorator()
-        self._onehot_decorator.collect_classes(y)
-        self._classes = self._onehot_decorator._classes
+        ret = unwrapped(self).collect_classes(y)
+        return ret
 
 
-    def fit(self, X, y):
-        self.instantiate_decorator()
-        return self._onehot_decorator.fit(X, y)
-
-
-    def predict(self, X):
-        return self._onehot_decorator.predict(X)
+    def get_classes(self):
+        return unwrapped(self).get_classes()

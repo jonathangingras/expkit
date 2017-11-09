@@ -5,7 +5,7 @@ import torch
 import torch.utils.data
 from ..experiment import Dataset
 from .operators import unwrapped
-from .learner import LearnerWrapper
+from .learner import LearnerWrapper, Event
 from .onehot import OneHotClassifierWrapper
 from ..utils.conversion import collect_classes, per_sample_shape, labels_to_one_hots
 
@@ -129,28 +129,27 @@ class OneHotAbstractNeuralNetwork(object):
 
 class AbstractNeuralNetwork(object):
     def __init__(self, *args, **kwargs):
-        self.learner = LearnerWrapper(OneHotClassifierWrapper, OneHotAbstractNeuralNetwork, *args, **kwargs)
+        self.learner = OneHotClassifierWrapper(OneHotAbstractNeuralNetwork, *args, **kwargs)
         self.validation_dataset = None
 
 
     def get_model(self, input_dim, output_dim):
-        raise RuntimeError("no get_model method overriden")
+        raise RuntimeError("no get_model method overridden")
 
 
     def register_validation_dataset(self, validation_dataset):
-        self.validation_dataset = validation_dataset
+        def convert_to_onehot(emitter, validation_dataset):
+            unwrapped(self.learner).learner.register_validation_dataset(Dataset(
+                validation_dataset.X,
+                labels_to_one_hots(validation_dataset.y, self.learner.get_classes(), dtype=np.float32)
+            ))
+
+        self.learner.register_event("classes_collected", Event(convert_to_onehot, validation_dataset))
 
 
     def fit(self, X, y):
-        onehot = unwrapped(self.learner, model=self.get_model(per_sample_shape(X), len(collect_classes(y))))
-        onehot.collect_classes(y)
-        unwrapped(onehot).register_validation_dataset(
-            Dataset(
-                self.validation_dataset.X,
-                labels_to_one_hots(self.validation_dataset.y, onehot._classes, dtype=np.float32)
-            )
-        )
-        onehot.fit(X, y)
+        self.learner.instantiate_estimator(model=self.get_model(per_sample_shape(X), len(collect_classes(y))))
+        return self.learner.fit(X, y)
 
 
     def predict(self, X):
