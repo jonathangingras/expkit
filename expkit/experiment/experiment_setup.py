@@ -3,7 +3,7 @@ import pickle as pkl
 import inspect
 from ..utils.comparison import DeepComparison
 from ..utils.iterators import each
-from ..utils.arguments import FallbackAccessor, reject_keys, islambda, null_function
+from ..utils.arguments import FallbackAccessor, reject_keys, islambda, null_function, reject_keys
 from ..format import Time
 from .dataset import Dataset
 from .result_producers import save_learner_object, apply_feature_names
@@ -99,7 +99,7 @@ class ExperimentSetup(object):
             "experiment_label": self.label,
             "begin_time": begin_time,
             "finish_time": Time(),
-            "configs": self.configs,
+            "configs": reject_keys(self.configs, ["before", "after"]),
         }
 
         each(self.result_producers())(lambda producer: producer(self, results))
@@ -115,7 +115,7 @@ class ExperimentSetup(object):
             with open(self.result_filepath(already_filled_result_dir), "rb") as f:
                 try:
                     res = pkl.load(f)
-                    if DeepComparison(self.configs, res["configs"]):
+                    if DeepComparison(self.configs, reject_keys(res["configs"], ["before", "after"])):
                         print("up-to-date pkl")
                         return res
                     else:

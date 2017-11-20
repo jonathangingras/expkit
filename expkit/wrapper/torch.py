@@ -8,6 +8,7 @@ from .operators import unwrapped
 from .learner import LearnerWrapper, Event
 from .onehot import OneHotClassifierWrapper
 from ..utils.conversion import collect_classes, per_sample_shape, labels_to_one_hots
+from ..utils.writer import StdOutOutput
 
 
 class OneHotAbstractNeuralNetwork(object):
@@ -23,7 +24,7 @@ class OneHotAbstractNeuralNetwork(object):
                  batch_size=64,
 
                  n_jobs=-1,
-                 log=sys.stdout,
+                 log=StdOutOutput(),
                  use_gpu=True):
 
         self.model = model
