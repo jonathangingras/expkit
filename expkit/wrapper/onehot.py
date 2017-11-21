@@ -31,7 +31,7 @@ class OneHotClassifierDecorator(object):
     def predict(self, X):
         y_pred = self.learner.predict(X)
 
-        return np.array(tuple(map(lambda one_hot: self._classes[np.argmax(one_hot)], y_pred)))
+        return np.array(tuple(map(lambda one_hot: self._classes[np.argmax(one_hot[0])], y_pred)))
 
 
 class OneHotClassifierWrapper(LearnerWrapper):

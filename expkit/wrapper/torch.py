@@ -9,6 +9,7 @@ from .learner import LearnerWrapper, Event
 from .onehot import OneHotClassifierWrapper
 from ..utils.conversion import collect_classes, per_sample_shape, labels_to_one_hots
 from ..utils.writer import StdOutOutput
+from time import sleep
 
 
 class OneHotAbstractNeuralNetwork(object):
@@ -61,13 +62,13 @@ class OneHotAbstractNeuralNetwork(object):
         return data.numpy()
 
 
-    def __log_loss(self, epoch_idx, batch_idx, loss):
+    def __log_loss(self, epoch_idx, batch_idx, loss, validation_loss=None):
         self.log.write(
-            "[epoch {}/{}, batch {}/{}]: training loss: {}, validation loss: {}\n".format(
+            "[epoch {}/{}, batch {}/{}]: training loss: {}{}\n".format(
                 epoch_idx, self.n_epochs,
                 batch_idx, int(self._n_samples/self.batch_size),
                 loss,
-                self.__validation_loss()))
+                ", validation loss: {}".format(validation_loss) if validation_loss is not None else ""))
 
 
     def __batch(self, batch_X, batch_y):
@@ -96,7 +97,13 @@ class OneHotAbstractNeuralNetwork(object):
     def __epoch(self, epoch_idx):
         for batch_idx, (batch_X, batch_y) in enumerate(self._data_loader):
             loss = self.__batch(batch_X, batch_y)
-            self.__log_loss(epoch_idx, batch_idx, loss)
+            validation_loss = None
+            if (epoch_idx == 0 or self.n_epochs % epoch_idx == 0) and batch_idx == 0:
+                validation_loss = self.__validation_loss()
+                self.__log_loss(epoch_idx, batch_idx, loss, validation_loss)
+                sleep(1)
+            else:
+                self.__log_loss(epoch_idx, batch_idx, loss, validation_loss)
 
 
     def register_validation_dataset(self, validation_dataset):

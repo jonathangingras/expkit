@@ -28,4 +28,4 @@ def labels_to_one_hots(y, classes, dtype=np.float64):
         one_hots[y == label, class_index] = 1
 
     tuple(map(apply_ones, classes))
-    return one_hots
+    return one_hots.reshape(one_hots.shape[0], 1, one_hots.shape[1])
