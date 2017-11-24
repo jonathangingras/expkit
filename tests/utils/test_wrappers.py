@@ -2,17 +2,32 @@ from unittest import TestCase
 from expkit.wrapper import LearnerWrapper, is_wrapper, unwrapped
 
 
+class DummyEstimator(object):
+    def __init__(self):
+        pass
+
+    def fit(self, X, y):
+        pass
+
+    def predict(self, X):
+        pass
+
+
 class SomeWrapper(LearnerWrapper):
     def __init__(self):
+        super().__init__(DummyEstimator)
         self.wrapped = 1
+
 
 class NonDefaultWrapper(LearnerWrapper):
     def __init__(self):
         self.nondefault = 1
 
+
     def __wrapped__(self):
         return self.nondefault
 
+    
 class SomeNonWrapper:
     pass
 
