@@ -22,13 +22,19 @@ def get_chained_attribute(initial_object, attributes_chain):
     return result
 
 
-class SingleObjectForwarder(object):
-    def __init__(self, caller_chain, arg_chain):
-        self.caller_chain = caller_chain
-        self.arg_chain = arg_chain
+class ChainedAttributeCallForwarder(object):
+    def __init__(self, function_chain, *arguments_chains):
+        self.function_chain = function_chain
+        self.arguments_chains = arguments_chains
 
 
     def __call__(self, chainable):
-        arg = call_if_callable(get_chained_attribute(chainable, self.arg_chain))
-        method = get_chained_attribute(chainable, self.caller_chain)
-        return method(arg)
+        def recurse(chain):
+            try:
+                return call_if_callable(get_chained_attribute(chainable, chain))
+            except TypeError:
+                return call_if_callable(chain)
+
+        function = get_chained_attribute(chainable, self.function_chain)
+
+        return function(*tuple(map(recurse, self.arguments_chains)))
