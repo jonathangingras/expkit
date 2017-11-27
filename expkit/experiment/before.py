@@ -1,3 +1,4 @@
+from ..utils.arguments import call_if_callable
 
 
 class ChainedAttributeError(AttributeError):
@@ -5,29 +6,29 @@ class ChainedAttributeError(AttributeError):
 
 
 def get_chained_attribute(initial_object, attributes_chain):
-    prev_result = None
     result = initial_object
 
     for element in attributes_chain:
-        prev_result = result
         try:
             result = getattr(result, element)
         except AttributeError:
             try:
                 result = result[element]
-            except KeyError:
-                raise ChainedAttributeError("invalid chain \"{}\" for object \"{}\"".format(attributes_chain, initial_object))
+            except (TypeError, KeyError) as error:
+                raise ChainedAttributeError(
+                    "invalid chain \"{}\" for object \"{}\"".format(
+                        attributes_chain, initial_object), error)
 
-    return result, prev_result
+    return result
 
 
-class SelfCalledForwarder(object):
-    def __init__(self, caller_chain, callee_chain):
+class SingleObjectForwarder(object):
+    def __init__(self, caller_chain, arg_chain):
         self.caller_chain = caller_chain
-        self.callee_chain = callee_chain
+        self.arg_chain = arg_chain
 
 
     def __call__(self, chainable):
-        arg = get_chained_attribute(chainable, self.callee_chain)[0]
-        method, caller = get_chained_attribute(chainable, self.caller_chain)
-        return method(caller, arg)
+        arg = call_if_callable(get_chained_attribute(chainable, self.arg_chain))
+        method = get_chained_attribute(chainable, self.caller_chain)
+        return method(arg)

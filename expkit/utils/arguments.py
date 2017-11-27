@@ -38,3 +38,10 @@ class FallbackAccessor(object):
             return self.accessed.__getitem__(*keys)
         except KeyError:
             return self.fallback
+
+
+def call_if_callable(obj, *args, **kwargs):
+    if callable(obj):
+        return obj(*args, **kwargs)
+    else:
+        return obj
