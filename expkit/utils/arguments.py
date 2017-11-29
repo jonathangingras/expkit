@@ -40,6 +40,10 @@ class FallbackAccessor(object):
             return self.fallback
 
 
+def fallback_access(accessed, fallback):
+    return FallbackAccessor(accessed, fallback)
+
+
 def call_if_callable(obj, *args, **kwargs):
     if callable(obj):
         return obj(*args, **kwargs)

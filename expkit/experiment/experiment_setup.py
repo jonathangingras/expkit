@@ -3,7 +3,7 @@ import pickle as pkl
 import inspect
 from ..utils.comparison import DeepComparison
 from ..utils.iterators import each
-from ..utils.arguments import FallbackAccessor, reject_keys, islambda, null_function, reject_keys
+from ..utils.arguments import fallback_access, reject_keys, islambda, null_function, reject_keys
 from ..format import Time
 from .dataset import Dataset
 from .result_producers import save_learner_object, apply_feature_names
@@ -57,18 +57,16 @@ class ExperimentSetup(object):
         self.dataset_extra_params = reject_keys(datasets, ["train", "test"])
         self.configs = configs
 
+        self.learner = None
+        self.y_pred = None
         self.results = None
-
-
-    def fallback_access(self, accessed, fallback):
-        return FallbackAccessor(accessed, fallback)
 
 
     def result_producers(self):
         return [
             apply_feature_names,
             save_learner_object
-        ] + self.fallback_access(self.configs, [])["producers"]
+        ] + fallback_access(self.configs, [])["producers"]
 
 
     def learner_class(self):
@@ -77,7 +75,7 @@ class ExperimentSetup(object):
 
     def learner_params(self):
         params = {}
-        params.update(self.fallback_access(self.configs, {})["params"])
+        params.update(fallback_access(self.configs, {})["params"])
         return params
 
 
@@ -88,12 +86,12 @@ class ExperimentSetup(object):
         self.train_dataset = get_valid_dataset(self.train_dataset)
         self.test_dataset = get_valid_dataset(self.test_dataset)
 
-        self.fallback_access(self.configs, null_function)["before"](self)
+        fallback_access(self.configs, null_function)["before"](self)
 
         self.learner.fit(self.train_dataset.X, self.train_dataset.y)
         self.y_pred = self.learner.predict(self.test_dataset.X)
 
-        self.fallback_access(self.configs, null_function)["after"](self)
+        fallback_access(self.configs, null_function)["after"](self)
 
         results = {
             "experiment_label": self.label,
