@@ -1,5 +1,6 @@
 from ..utils.arguments import star_wrap
 from .experiment_setup import ExperimentSetup
+from ..format import Time
 
 
 def create_experiment_setup(data, learners, learner_label, dataset_label, setup_class):
@@ -28,7 +29,9 @@ def map_experiments(function, data, learners, rejected_combinations=()):
                create_experiment_setups(data, learners, rejected_combinations))
 
 
-def run_experiments(data, learners, result_dir='__results__', rejected_combinations=()):
+def run_experiments(data, learners, result_dir=None, rejected_combinations=()):
+    if result_dir is None:
+        result_dir = "__results__{}".format(Time())
     tuple(map_experiments(lambda e: e(result_dir), data, learners, rejected_combinations))
 
 

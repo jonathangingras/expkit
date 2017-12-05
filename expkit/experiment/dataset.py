@@ -2,7 +2,7 @@ import numpy as np
 
 
 class Dataset(object):
-    def __init__(self, X, y, feature_names=None, copy=True):
+    def __init__(self, X, y, feature_names=None, copy=True, X_dtype=None, y_dtype=None):
         if len(X) != len(y):
             raise RuntimeError("first dimension of X and y must be the same")
 
@@ -13,12 +13,13 @@ class Dataset(object):
         else:
             self.feature_names = list(range(len(X[0])))
 
-        self.X = np.array(X, copy=copy)
-        self.y = np.array(y, copy=copy)
+        self.X = np.array(X, dtype=X_dtype, copy=copy)
+        self.y = np.array(y, dtype=y_dtype, copy=copy)
 
 
-    def shuffle(self):
-        permutations = np.random.permutation(len(self.X))
+    def shuffle(self, seed=None):
+        random_state = np.random.RandomState(seed)
+        permutations = random_state.permutation(len(self.X))
         np.take(self.X, permutations, axis=0, out=self.X)
         np.take(self.y, permutations, axis=0, out=self.y)
 
@@ -55,3 +56,39 @@ class Dataset(object):
 
         return (Dataset(self.X[:amount1], self.y[:amount1], self.feature_names),
                 Dataset(self.X[amount1:], self.y[amount1:], self.feature_names))
+
+
+class DatasetAbstractSplitMixin(object):
+    def __init__(self, X, y, feature_names=None, **dataset_kwargs):
+        self.splits = {
+            "train": None,
+            "test": None,
+            "validation": None
+        }
+        self._split(X, y, feature_names, **dataset_kwargs)
+
+
+    def __getitem__(self, key):
+        return self.splits[key]
+
+
+    def keys(self):
+        return self.splits.keys()
+
+
+class DatasetRandomSplit(DatasetAbstractSplitMixin):
+    def __init__(self, *args, ratios={"train-test": 2/3, "train-valid": 2/3}, seed=None, **kwargs):
+        self.ratios = ratios
+        self.seed = seed
+        super().__init__(*args, **kwargs)
+
+
+    def _split(self, X, y, feature_names=None, **dataset_kwargs):
+        data = Dataset(X, y, feature_names, **dataset_kwargs).shuffle(self.seed)
+        train, test = data.split(self.ratios["train-test"])
+        train, validation = train.split(self.ratios["train-valid"])
+        self.splits.update({
+            "train": train,
+            "test": test,
+            "validation": validation
+        })

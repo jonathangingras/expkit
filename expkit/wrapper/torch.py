@@ -12,7 +12,7 @@ from ..utils.writer import StdOutOutput
 from time import sleep
 
 
-class OneHotAbstractNeuralNetwork(object):
+class AbstractNeuralNetwork(object):
     def __init__(self,
                  model,
                  loss_function_class,
@@ -26,6 +26,8 @@ class OneHotAbstractNeuralNetwork(object):
 
                  n_jobs=-1,
                  log=StdOutOutput(),
+
+                 seed=None,
                  use_gpu=True):
 
         self.model = model
@@ -44,6 +46,8 @@ class OneHotAbstractNeuralNetwork(object):
 
         if self.use_gpu:
             self.model = self.model.cuda()
+
+        self.seed = seed
 
         self.validation_dataset = None
 
@@ -97,8 +101,9 @@ class OneHotAbstractNeuralNetwork(object):
     def __epoch(self, epoch_idx):
         for batch_idx, (batch_X, batch_y) in enumerate(self._data_loader):
             loss = self.__batch(batch_X, batch_y)
+
             validation_loss = None
-            if (epoch_idx == 0 or self.n_epochs % epoch_idx == 0) and batch_idx == 0:
+            if (epoch_idx % (int(self.n_epochs * 0.05)) == 0) and batch_idx == 0:
                 validation_loss = self.__validation_loss()
                 self.__log_loss(epoch_idx, batch_idx, loss, validation_loss)
                 sleep(1)
@@ -114,11 +119,15 @@ class OneHotAbstractNeuralNetwork(object):
 
 
     def fit(self, X, y):
+        if self.seed is not None:
+            torch.manual_seed(self.seed)
+
         X = torch.from_numpy(np.array(X))
         y = torch.from_numpy(np.array(y))
 
         dataset = torch.utils.data.TensorDataset(X, y)
         self._n_samples = len(dataset)
+
         self._data_loader = torch.utils.data.DataLoader(
             dataset, batch_size=self.batch_size, shuffle=True,
             num_workers=self.workers, pin_memory=True, sampler=None)
@@ -135,10 +144,11 @@ class OneHotAbstractNeuralNetwork(object):
         return self.__to_numpy(pred)
 
 
-class AbstractNeuralNetwork(object):
-    def __init__(self, *args, **kwargs):
-        self.learner = OneHotClassifierWrapper(OneHotAbstractNeuralNetwork, *args, **kwargs)
+class AbstractOneHotNeuralNetwork(object):
+    def __init__(self, *args, y_dtype=None, **kwargs):
+        self.learner = OneHotClassifierWrapper(AbstractNeuralNetwork, *args, y_dtype=y_dtype, **kwargs)
         self.validation_dataset = None
+        self.y_dtype = y_dtype
 
 
     def get_model(self, input_dim, output_dim):
@@ -149,7 +159,7 @@ class AbstractNeuralNetwork(object):
         def convert_to_onehot(emitter, validation_dataset):
             unwrapped(self.learner).learner.register_validation_dataset(Dataset(
                 validation_dataset.X,
-                labels_to_one_hots(validation_dataset.y, self.learner.get_classes(), dtype=np.float32)
+                labels_to_one_hots(validation_dataset.y, self.learner.get_classes(), dtype=self.y_dtype)
             ))
 
         self.learner.register_event("classes_collected", Event(convert_to_onehot, validation_dataset))

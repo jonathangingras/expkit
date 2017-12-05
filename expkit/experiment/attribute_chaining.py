@@ -28,6 +28,12 @@ class ChainedAttributeCallForwarder(object):
         self.arguments_chains = arguments_chains
 
 
+    def __eq__(self, other):
+        return isinstance(other, ChainedAttributeCallForwarder) and \
+            self.function_chain == other.function_chain and \
+            self.arguments_chains == other.arguments_chains
+
+
     def __call__(self, chainable):
         def recurse(chain):
             try:

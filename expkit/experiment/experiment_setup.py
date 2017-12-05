@@ -3,7 +3,7 @@ import pickle as pkl
 import inspect
 from ..utils.comparison import DeepComparison
 from ..utils.iterators import each
-from ..utils.arguments import fallback_access, reject_keys, islambda, null_function, reject_keys
+from ..utils.arguments import fallback_access, reject_keys, islambda, null_function
 from ..format import Time
 from .dataset import Dataset
 from .result_producers import save_learner_object, apply_feature_names
@@ -79,8 +79,12 @@ class ExperimentSetup(object):
         return params
 
 
+    def saved_configs(self, alt_configs=None):
+        configs = alt_configs if alt_configs is not None else self.configs
+        return reject_keys(configs, ["unsaved"] + fallback_access(configs, [])["unsaved"])
+
+
     def run(self):
-        begin_time = Time()
         self.learner = self.learner_class()(**self.learner_params())
 
         self.train_dataset = get_valid_dataset(self.train_dataset)
@@ -88,16 +92,18 @@ class ExperimentSetup(object):
 
         fallback_access(self.configs, null_function)["before"](self)
 
+        begin_time = Time()
         self.learner.fit(self.train_dataset.X, self.train_dataset.y)
         self.y_pred = self.learner.predict(self.test_dataset.X)
+        finish_time = Time()
 
         fallback_access(self.configs, null_function)["after"](self)
 
         results = {
             "experiment_label": self.label,
             "begin_time": begin_time,
-            "finish_time": Time(),
-            "configs": reject_keys(self.configs, ["before", "after"]),
+            "finish_time": finish_time,
+            "configs": self.saved_configs(),
         }
 
         each(self.result_producers())(lambda producer: producer(self, results))
@@ -113,12 +119,14 @@ class ExperimentSetup(object):
             with open(self.result_filepath(already_filled_result_dir), "rb") as f:
                 try:
                     res = pkl.load(f)
-                    if DeepComparison(self.configs, reject_keys(res["configs"], ["before", "after"])):
+
+                    if DeepComparison(self.saved_configs(), self.saved_configs(res["configs"])):
                         print("up-to-date pkl")
                         return res
                     else:
                         print("rerunning experiment with new configs")
-                except:
+                except Exception as error:
+                    print(error)
                     print("corrupted pickle")
         else:
             print("no existing pkl for " + self.label)
