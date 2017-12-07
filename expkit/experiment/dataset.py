@@ -68,6 +68,11 @@ class DatasetAbstractSplitMixin(object):
         self._split(X, y, feature_names, **dataset_kwargs)
 
 
+    @classmethod
+    def from_dataset(cls, dataset, *args, **kwargs):
+        return cls(dataset.X, dataset.y, dataset.feature_names, *args, **kwargs)
+
+
     def __getitem__(self, key):
         return self.splits[key]
 
