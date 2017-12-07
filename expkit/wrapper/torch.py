@@ -27,7 +27,6 @@ class AbstractNeuralNetwork(object):
                  n_jobs=-1,
                  log=StdOutOutput(),
 
-                 seed=None,
                  use_gpu=True):
 
         self.model = model
@@ -46,8 +45,6 @@ class AbstractNeuralNetwork(object):
 
         if self.use_gpu:
             self.model = self.model.cuda()
-
-        self.seed = seed
 
         self.validation_dataset = None
 
@@ -119,9 +116,6 @@ class AbstractNeuralNetwork(object):
 
 
     def fit(self, X, y):
-        if self.seed is not None:
-            torch.manual_seed(self.seed)
-
         X = torch.from_numpy(np.array(X))
         y = torch.from_numpy(np.array(y))
 
@@ -144,8 +138,23 @@ class AbstractNeuralNetwork(object):
         return self.__to_numpy(pred)
 
 
-class AbstractOneHotNeuralNetwork(object):
-    def __init__(self, *args, y_dtype=None, **kwargs):
+class SeedInitializerMixin(object):
+    def __init__(self, seed=None):
+        self.seed = seed
+
+        self.init_seed()
+
+
+    def init_seed(self):
+        if self.seed is not None:
+            print("setting torch seed")
+            torch.manual_seed(self.seed)
+
+
+class AbstractOneHotNeuralNetwork(SeedInitializerMixin):
+    def __init__(self, *args, y_dtype=None, seed=None, **kwargs):
+        SeedInitializerMixin.__init__(self, seed)
+
         self.learner = OneHotClassifierWrapper(AbstractNeuralNetwork, *args, y_dtype=y_dtype, **kwargs)
         self.validation_dataset = None
         self.y_dtype = y_dtype
