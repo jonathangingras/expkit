@@ -10,6 +10,7 @@ from .onehot import OneHotClassifierWrapper
 from ..utils.conversion import collect_classes, per_sample_shape, labels_to_one_hots
 from ..utils.writer import StdOutOutput
 from time import sleep
+import math
 
 
 class AbstractNeuralNetwork(object):
@@ -100,7 +101,7 @@ class AbstractNeuralNetwork(object):
             loss = self.__batch(batch_X, batch_y)
 
             validation_loss = None
-            if (epoch_idx % (int(self.n_epochs * 0.05)) == 0) and batch_idx == 0:
+            if (epoch_idx % (math.ceil(self.n_epochs * 0.05)) == 0) and batch_idx == 0:
                 validation_loss = self.__validation_loss()
                 self.__log_loss(epoch_idx, batch_idx, loss, validation_loss)
                 sleep(1)
