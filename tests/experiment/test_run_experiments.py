@@ -2,37 +2,40 @@ from unittest import TestCase
 import os, shutil
 from expkit.experiment.shortcuts import run_experiments
 from expkit.experiment import Dataset
+from expkit.utils.arguments import reject_keys
 from sklearn.datasets import load_iris
 from sklearn.ensemble import AdaBoostClassifier
 
 
-class GlobalAccessor(object):
-    learner_ = None
+class Accessor(object):
+    def __init__(self):
+        self.learner_ = None
 
 
-    @staticmethod
-    def set_learner(learner):
-        GlobalAccessor.learner_ = learner
+    def set_learner(self, learner):
+        self.learner_ = learner
 
 
-    @staticmethod
-    def get_learner():
-        return GlobalAccessor.learner_
+    def get_learner(self):
+        return self.learner_
 
 
-    @staticmethod
-    def clear():
-        GlobalAccessor.learner_ = None
+    def __eq__(self, other):
+        return True
+
+
+    def clear(self):
+        self.learner_ = None
 
 
 class DummyClassifier(object):
     def __init__(self, *args, **kwargs):
         self.args = args
-        self.kwargs = kwargs
+        self.kwargs = reject_keys(kwargs, ["accessor"])
         self.X = None
         self.y = None
 
-        GlobalAccessor.set_learner(self)
+        kwargs["accessor"].set_learner(self)
 
 
     def fit(self, X, y):
@@ -44,42 +47,52 @@ class DummyClassifier(object):
         pass
 
 
-data = {
-    "iris": {
-        "train": Dataset(load_iris().data[:100], load_iris().target[:100], load_iris().feature_names),
-        "test": Dataset(load_iris().data[100:], load_iris().target[100:], load_iris().feature_names)
-    }
-}
-
-learners = {
-    "Dummy": {
-        "class": DummyClassifier,
-        "params": {
-            "lr": 0.1,
-            "someparam": 42
+def get_data():
+    return {
+        "iris": {
+            "train": Dataset(load_iris().data[:100], load_iris().target[:100], load_iris().feature_names),
+            "test": Dataset(load_iris().data[100:], load_iris().target[100:], load_iris().feature_names)
         }
     }
-}
+
+
+def get_learners():
+    return {
+        "Dummy": {
+            "class": DummyClassifier,
+            "params": {
+                "lr": 0.1,
+                "someparam": 42,
+                "accessor": Accessor()
+            }
+        }
+    }
+
+
+def get_accessor(learners):
+    return learners["Dummy"]["params"]["accessor"]
 
 
 class RunExperimentsTest(TestCase):
-    def tearDown(self):
-        if os.path.exists("__results__"):
-            shutil.rmtree("__results__")
-
-        GlobalAccessor.clear()
+    RESULT_DIRNAME = "__results__"
 
 
     def test_instanciates_learner_with_given_params(self):
-        run_experiments(data, learners)
+        data, learners = get_data(), get_learners()
 
-        self.assertIsNotNone(GlobalAccessor.get_learner())
-        self.assertEqual(learners["Dummy"]["params"], GlobalAccessor.get_learner().kwargs)
+        run_experiments(data, learners, self.RESULT_DIRNAME + "1")
+
+        self.assertEqual(reject_keys(learners["Dummy"]["params"], ["accessor"]),
+                         get_accessor(learners).get_learner().kwargs)
+        shutil.rmtree(self.RESULT_DIRNAME + "1")
 
 
     def test_fits_learner_with_train_data(self):
-        run_experiments(data, learners)
+        data, learners = get_data(), get_learners()
 
-        self.assertEqual(data["iris"]["train"].X.all(), GlobalAccessor.get_learner().X.all())
-        self.assertEqual(data["iris"]["train"].y.all(), GlobalAccessor.get_learner().y.all())
+        run_experiments(data, learners, self.RESULT_DIRNAME + "2")
+
+        self.assertEqual(data["iris"]["train"].X.all(), get_accessor(learners).get_learner().X.all())
+        self.assertEqual(data["iris"]["train"].y.all(), get_accessor(learners).get_learner().y.all())
+        shutil.rmtree(self.RESULT_DIRNAME + "2")
 

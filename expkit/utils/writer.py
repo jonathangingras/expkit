@@ -57,3 +57,71 @@ class TeeWriter(Writer):
 
     def write(self, *args):
         return super().write(*args) + self.tee_output.write(*args)
+
+
+class BufferArray(object):
+    def __init__(self):
+        self.data = []
+
+
+    def write(self, arg):
+        self.data += arg
+        return len(arg)
+
+
+    def clear(self):
+        self.data.clear()
+
+
+    def write_to(self, output):
+        tuple(map(output.write, self.data))
+
+
+    def __len__(self):
+        return len(self.data)
+
+
+    def __repr__(self):
+        return "<{}.{} object with data: {}>".format(self.__class__.__module__,
+                                                         self.__class__.__name__,
+                                                         self.data)
+
+
+    def __str__(self):
+        return "".join(self.data)
+
+
+    def __format__(self, f):
+        return str(self)
+
+
+class InMemoryWriter(Writer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(output=BufferArray(), *args, **kwargs)
+
+
+class FileWriter(Writer):
+    def __init__(self, filename, *args, buffer_size=1024, mode="w+", **kwargs):
+        super().__init__(*args, **kwargs)
+        self.filename = filename
+        self.mode = mode
+        self.buffer_size = buffer_size
+        self.buffer = BufferArray()
+
+
+    def __del__(self):
+        self.flush()
+
+
+    def flush(self):
+        with open(self.filename, self.mode) as f:
+            self.buffer.write_to(f)
+        self.buffer.clear()
+
+
+    @property
+    def output(self):
+        if len(self.buffer) + 1 > self.buffer_size:
+            self.flush()
+
+        return self.buffer

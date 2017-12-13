@@ -1,5 +1,5 @@
 from unittest import TestCase
-from expkit.utils.writer import Writer, SkipWriter, DotWriter
+from expkit.utils.writer import Writer, SkipWriter, DotWriter, TeeWriter
 
 
 class StdOutStub(object):
@@ -91,3 +91,21 @@ class DotWriterTest(TestCase):
 
         self.assertEqual(len(self.INSTANCE_TIME_STR), length)
         self.assertEqual(self.INSTANCE_TIME_STR, self.output.received)
+
+
+class TeeWriterTest(TestCase):
+    STR = "somestring"
+
+
+    def setUp(self):
+        self.output1 = StdOutStub()
+        self.output2 = StdOutStub()
+        self.writer = TeeWriter(self.output1, self.output2)
+
+
+    def test_writer_writes_equally_to_both_outputs(self):
+        length = self.writer.write(self.STR)
+
+        self.assertEqual(2 * len(self.STR), length)
+        self.assertEqual(self.STR, self.output1.received)
+        self.assertEqual(self.STR, self.output2.received)
