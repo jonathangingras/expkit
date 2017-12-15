@@ -1,4 +1,5 @@
 import sys
+from functools import reduce
 
 
 class StdOutOutput(object):
@@ -65,26 +66,28 @@ class BufferArray(object):
 
 
     def write(self, arg):
-        self.data += arg
-        return len(arg)
+        self.data.append(arg)
+        return len(self.data[-1])
 
 
     def clear(self):
         self.data.clear()
 
 
-    def write_to(self, output):
+    def dump(self, output):
         tuple(map(output.write, self.data))
 
 
     def __len__(self):
-        return len(self.data)
+        if len(self.data) == 0:
+            return 0
+        return reduce(lambda x, y: x + y, map(len, self.data))
 
 
     def __repr__(self):
         return "<{}.{} object with data: {}>".format(self.__class__.__module__,
-                                                         self.__class__.__name__,
-                                                         self.data)
+                                                     self.__class__.__name__,
+                                                     self.data)
 
 
     def __str__(self):
@@ -100,13 +103,15 @@ class InMemoryWriter(Writer):
         super().__init__(output=BufferArray(), *args, **kwargs)
 
 
+    def dump(self, output):
+        self.output.dump(output)
+
+
 class FileWriter(Writer):
-    def __init__(self, filename, *args, buffer_size=1024, mode="w+", **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, filename, *args, buffer_size=1024, **kwargs):
+        super().__init__(output=BufferArray(), *args, **kwargs)
         self.filename = filename
-        self.mode = mode
-        self.buffer_size = buffer_size
-        self.buffer = BufferArray()
+        self.buffer_limit = buffer_size
 
 
     def __del__(self):
@@ -114,14 +119,13 @@ class FileWriter(Writer):
 
 
     def flush(self):
-        with open(self.filename, self.mode) as f:
-            self.buffer.write_to(f)
-        self.buffer.clear()
+        with open(self.filename, "a") as f:
+            self.output.dump(f)
+        self.output.clear()
 
 
-    @property
-    def output(self):
-        if len(self.buffer) + 1 > self.buffer_size:
+    def write(self, *args):
+        if len(self.output) + 1 > self.buffer_limit:
             self.flush()
 
-        return self.buffer
+        return super().write(*args)
