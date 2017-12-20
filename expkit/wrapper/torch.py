@@ -8,6 +8,7 @@ from .operators import unwrapped
 from .learner import LearnerWrapper, Event
 from .onehot import OneHotClassifierWrapper
 from ..utils.conversion import collect_classes, per_sample_shape, labels_to_one_hots
+from ..utils.arguments import null_function
 from ..utils.writer import StdOutOutput
 from time import sleep
 import math
@@ -25,9 +26,10 @@ class AbstractNeuralNetwork(object):
                  n_epochs=200,
                  batch_size=64,
 
+                 after_validation=null_function,
+
                  n_jobs=-1,
                  log=StdOutOutput(),
-
                  use_gpu=True):
 
         self.model = model
@@ -48,6 +50,7 @@ class AbstractNeuralNetwork(object):
             self.model = self.model.cuda()
 
         self.validation_dataset = None
+        self.after_validation = after_validation
 
 
     def __to_variable(self, tensor):
@@ -103,10 +106,9 @@ class AbstractNeuralNetwork(object):
             validation_loss = None
             if (epoch_idx % (math.ceil(self.n_epochs * 0.05)) == 0) and batch_idx == 0:
                 validation_loss = self.__validation_loss()
-                self.__log_loss(epoch_idx, batch_idx, loss, validation_loss)
-                sleep(1)
-            else:
-                self.__log_loss(epoch_idx, batch_idx, loss, validation_loss)
+                self.after_validation(self)
+
+            self.__log_loss(epoch_idx, batch_idx, loss, validation_loss)
 
 
     def register_validation_dataset(self, validation_dataset):
