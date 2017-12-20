@@ -26,8 +26,6 @@ class AbstractNeuralNetwork(object):
                  n_epochs=200,
                  batch_size=64,
 
-                 after_validation=null_function,
-
                  n_jobs=-1,
                  log=StdOutOutput(),
                  use_gpu=True):
@@ -50,7 +48,7 @@ class AbstractNeuralNetwork(object):
             self.model = self.model.cuda()
 
         self.validation_dataset = None
-        self.after_validation = after_validation
+        self.test_dataset = None
 
 
     def __to_variable(self, tensor):
@@ -67,13 +65,17 @@ class AbstractNeuralNetwork(object):
         return data.numpy()
 
 
-    def __log_loss(self, epoch_idx, batch_idx, loss, validation_loss=None):
-        self.log.write(
-            "[epoch {}/{}, batch {}/{}]: training loss: {}{}\n".format(
-                epoch_idx, self.n_epochs,
-                batch_idx, int(self._n_samples/self.batch_size),
-                loss,
-                ", validation loss: {}".format(validation_loss) if validation_loss is not None else ""))
+    def __log(self, epoch_idx, batch_idx, loss, validation_loss=None, test_loss=None):
+        self.log.write(r'{',
+                       '"epoch": {}, "n_epochs": {}, "batch": {}, "n_batches": {}, "training loss": {}{}{}'.format(
+                           epoch_idx,
+                           self.n_epochs,
+                           batch_idx,
+                           int(self._n_samples/self.batch_size),
+                           loss,
+                           ', "validation loss": {}'.format(validation_loss) if validation_loss is not None else "",
+                           ', "test loss": {}'.format(test_loss) if test_loss is not None else ""),
+                       r'}', '\n')
 
 
     def __batch(self, batch_X, batch_y):
@@ -99,20 +101,37 @@ class AbstractNeuralNetwork(object):
         return loss.data[0]
 
 
+    def __test_loss(self):
+        if not self.test_dataset:
+            return None
+
+        test_pred = self.model(self.test_dataset["X"])
+        loss = self.loss(test_pred, self.test_dataset["y"])
+        return loss.data[0]
+
+
     def __epoch(self, epoch_idx):
         for batch_idx, (batch_X, batch_y) in enumerate(self._data_loader):
             loss = self.__batch(batch_X, batch_y)
 
             validation_loss = None
+            test_loss = None
             if (epoch_idx % (math.ceil(self.n_epochs * 0.05)) == 0) and batch_idx == 0:
                 validation_loss = self.__validation_loss()
-                self.after_validation(self)
+                test_loss = self.__test_loss()
 
-            self.__log_loss(epoch_idx, batch_idx, loss, validation_loss)
+            self.__log(epoch_idx, batch_idx, loss, validation_loss, test_loss)
 
 
     def register_validation_dataset(self, validation_dataset):
         self.validation_dataset = {
+            "X": self.__to_variable(torch.from_numpy(validation_dataset.X)),
+            "y": self.__to_variable(torch.from_numpy(validation_dataset.y))
+        }
+
+
+    def register_test_dataset(self, validation_dataset):
+        self.test_dataset = {
             "X": self.__to_variable(torch.from_numpy(validation_dataset.X)),
             "y": self.__to_variable(torch.from_numpy(validation_dataset.y))
         }
@@ -167,14 +186,19 @@ class AbstractOneHotNeuralNetwork(SeedInitializerMixin):
         raise RuntimeError("no get_model method overridden")
 
 
-    def register_validation_dataset(self, validation_dataset):
-        def convert_to_onehot(emitter, validation_dataset):
+    def register_evaluation_datasets(self, validation_dataset, test_dataset=None):
+        def convert_to_onehot(emitter, validation_dataset, test_dataset=None):
             unwrapped(self.learner).learner.register_validation_dataset(Dataset(
                 validation_dataset.X,
                 labels_to_one_hots(validation_dataset.y, self.learner.get_classes(), dtype=self.y_dtype)
             ))
+            if test_dataset is not None:
+                unwrapped(self.learner).learner.register_test_dataset(Dataset(
+                    test_dataset.X,
+                    labels_to_one_hots(test_dataset.y, self.learner.get_classes(), dtype=self.y_dtype)
+                ))
 
-        self.learner.register_event("classes_collected", Event(convert_to_onehot, validation_dataset))
+        self.learner.register_event("classes_collected", Event(convert_to_onehot, validation_dataset, test_dataset))
 
 
     def fit(self, X, y):
