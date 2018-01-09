@@ -137,6 +137,15 @@ class WrappableNeuralNetwork(object):
         }
 
 
+    def __getstate__(self):
+        state = {key: value for key, value in self.__dict__.items() if key not in ["validation_dataset", "test_dataset"]}
+        return state
+
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+
+
     def fit(self, X, y):
         X = torch.from_numpy(np.array(X))
         y = torch.from_numpy(np.array(y))
