@@ -14,7 +14,7 @@ from time import sleep
 import math
 
 
-class AbstractNeuralNetwork(object):
+class WrappableNeuralNetwork(object):
     def __init__(self,
                  model,
                  loss_function_class,
@@ -173,11 +173,11 @@ class SeedInitializerMixin(object):
             torch.manual_seed(self.seed)
 
 
-class AbstractOneHotNeuralNetwork(SeedInitializerMixin):
+class BasicAbstractNeuralNetwork(SeedInitializerMixin):
     def __init__(self, *args, y_dtype=None, seed=None, **kwargs):
         SeedInitializerMixin.__init__(self, seed)
 
-        self.learner = OneHotClassifierWrapper(AbstractNeuralNetwork, *args, y_dtype=y_dtype, **kwargs)
+        self.learner = LearnerWrapper(WrappableNeuralNetwork, *args, y_dtype=y_dtype, **kwargs)
         self.validation_dataset = None
         self.y_dtype = y_dtype
 
@@ -208,3 +208,12 @@ class AbstractOneHotNeuralNetwork(SeedInitializerMixin):
 
     def predict(self, X):
         return self.learner.predict(X)
+    
+            
+class AbstractOneHotNeuralNetwork(BasicAbstractNeuralNetwork):
+    def __init__(self, *args, y_dtype=None, seed=None, **kwargs):
+        SeedInitializerMixin.__init__(self, seed)
+
+        self.learner = OneHotClassifierWrapper(WrappableNeuralNetwork, *args, y_dtype=y_dtype, **kwargs)
+        self.validation_dataset = None
+        self.y_dtype = y_dtype
