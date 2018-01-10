@@ -2,6 +2,11 @@ import numpy as np
 
 
 def collect_classes(y):
+    if isinstance(y, np.ndarray):
+        cy = np.ascontiguousarray(y).view(np.dtype((np.void, y.dtype.itemsize * y.shape[1])))
+        _, idx = np.unique(cy, return_index=True)
+        return y[idx]
+    
     return np.array(list(set(y)))
 
 
