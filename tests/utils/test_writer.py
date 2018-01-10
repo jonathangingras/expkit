@@ -10,9 +10,13 @@ class StdOutStub(object):
     def __init__(self):
         self.received = ""
 
-    def write(self, arg):
-        self.received += arg
-        return len(arg)
+
+    def write(self, *args):
+        length = 0
+        for arg in args:
+            self.received += arg
+            length += len(arg)
+        return length
 
 
 class NonStrStub(object):

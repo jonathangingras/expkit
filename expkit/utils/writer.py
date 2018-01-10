@@ -7,6 +7,18 @@ class StdOutOutput(object):
         return sys.stdout.write(arg)
 
 
+class TeeWriter(object):
+    def __init__(self, output, tee_output):
+        if output is None or tee_output is None:
+            raise ValueError("no output may be None")
+        self.output = output
+        self.tee_output = tee_output
+
+
+    def write(self, *args):
+        return self.output.write(*args) + self.tee_output.write(*args)
+
+
 class Writer(object):
     def __init__(self, output=None, separator=' '):
         self.separator = separator
@@ -51,19 +63,6 @@ class DotWriter(Writer):
 
     def write(self, *args):
         return super().write(self.string)
-
-
-class TeeWriter(Writer):
-    def __init__(self, output, tee_output, separator=' '):
-        super().__init__(output=output, separator=separator)
-        if tee_output is None:
-            raise ValueError("teed output may not be None")
-        self.tee_output = tee_output
-
-
-    def write(self, *args):
-        super().write(*args)
-        return self.tee_output.write(*args)
 
 
 class BufferArray(object):
