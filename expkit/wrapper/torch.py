@@ -9,7 +9,7 @@ from .learner import LearnerWrapper, Event
 from .onehot import OneHotClassifierWrapper
 from ..utils.conversion import collect_classes, per_sample_shape, labels_to_one_hots
 from ..utils.arguments import null_function
-from ..utils.writer import StdOutOutput
+from ..utils.writer import Writer
 from time import sleep
 import math
 
@@ -27,7 +27,7 @@ class WrappableNeuralNetwork(object):
                  batch_size=64,
 
                  n_jobs=-1,
-                 log=StdOutOutput(),
+                 log=Writer(),
                  use_gpu=True):
 
         self.model = model
@@ -183,11 +183,10 @@ class SeedInitializerMixin(object):
 
 
 class BasicAbstractNeuralNetwork(SeedInitializerMixin):
-    def __init__(self, *args, y_dtype=None, seed=None, **kwargs):
+    def __init__(self, y_dtype=None, seed=None, **kwargs):
         SeedInitializerMixin.__init__(self, seed)
 
-        self.learner = LearnerWrapper(WrappableNeuralNetwork, *args, y_dtype=y_dtype, **kwargs)
-        self.validation_dataset = None
+        self.learner = LearnerWrapper(WrappableNeuralNetwork, **kwargs)
         self.y_dtype = y_dtype
 
 
@@ -197,15 +196,13 @@ class BasicAbstractNeuralNetwork(SeedInitializerMixin):
 
     def register_evaluation_datasets(self, validation_dataset, test_dataset=None):
         def convert_to_onehot(emitter, validation_dataset, test_dataset=None):
-            unwrapped(self.learner).learner.register_validation_dataset(Dataset(
-                validation_dataset.X,
-                labels_to_one_hots(validation_dataset.y, self.learner.get_classes(), dtype=self.y_dtype)
-            ))
+            unwrapped(self.learner).learner.register_validation_dataset(
+                Dataset(validation_dataset.X, validation_dataset.y, self.learner.get_classes())
+            )
             if test_dataset is not None:
-                unwrapped(self.learner).learner.register_test_dataset(Dataset(
-                    test_dataset.X,
-                    labels_to_one_hots(test_dataset.y, self.learner.get_classes(), dtype=self.y_dtype)
-                ))
+                unwrapped(self.learner).learner.register_test_dataset(
+                    Dataset(test_dataset.X, test_dataset.y, self.learner.get_classes())
+                )
 
         self.learner.register_event("classes_collected", Event(convert_to_onehot, validation_dataset, test_dataset))
 
@@ -226,3 +223,18 @@ class AbstractOneHotNeuralNetwork(BasicAbstractNeuralNetwork):
         self.learner = OneHotClassifierWrapper(WrappableNeuralNetwork, *args, y_dtype=y_dtype, **kwargs)
         self.validation_dataset = None
         self.y_dtype = y_dtype
+        
+        
+    def register_evaluation_datasets(self, validation_dataset, test_dataset=None):
+        def convert_to_onehot(emitter, validation_dataset, test_dataset=None):
+            unwrapped(self.learner).learner.register_validation_dataset(Dataset(
+                validation_dataset.X,
+                labels_to_one_hots(validation_dataset.y, self.learner.get_classes(), dtype=self.y_dtype)
+            ))
+            if test_dataset is not None:
+                unwrapped(self.learner).learner.register_test_dataset(Dataset(
+                    test_dataset.X,
+                    labels_to_one_hots(test_dataset.y, self.learner.get_classes(), dtype=self.y_dtype)
+                ))
+
+        self.learner.register_event("classes_collected", Event(convert_to_onehot, validation_dataset, test_dataset))
