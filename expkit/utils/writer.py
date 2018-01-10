@@ -8,9 +8,12 @@ class StdOutOutput(object):
 
 
 class Writer(object):
-    def __init__(self, output=StdOutOutput(), separator=' '):
+    def __init__(self, output=None, separator=' '):
         self.separator = separator
-        self.output = output
+        if output is None:
+            self.output = StdOutOutput()
+        else:
+            self.output = output
 
 
     def __eq__(self, other):
@@ -24,8 +27,8 @@ class Writer(object):
 
 
 class SkipWriter(Writer):
-    def __init__(self, skip_factor=10, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, output=None, separator=' ', skip_factor=10):
+        super().__init__(output=output, separator=separator)
         self.count = 0
         self.skip_factor = skip_factor
 
@@ -41,8 +44,8 @@ class SkipWriter(Writer):
 
 
 class DotWriter(Writer):
-    def __init__(self, string='.', *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, output=None, separator=' ', string='.'):
+        super().__init__(output=output, separator=separator)
         self.string = string
 
 
@@ -51,13 +54,16 @@ class DotWriter(Writer):
 
 
 class TeeWriter(Writer):
-    def __init__(self, output, tee_output, *args, **kwargs):
-        super().__init__(output=output, *args, **kwargs)
+    def __init__(self, output, tee_output, separator=' '):
+        super().__init__(output=output, separator=separator)
+        if tee_output is None:
+            raise ValueError("teed output may not be None")
         self.tee_output = tee_output
 
 
     def write(self, *args):
-        return super().write(*args) + self.tee_output.write(*args)
+        super().write(*args)
+        return self.tee_output.write(*args)
 
 
 class BufferArray(object):
@@ -99,8 +105,8 @@ class BufferArray(object):
 
 
 class InMemoryWriter(Writer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(output=BufferArray(), *args, **kwargs)
+    def __init__(self, separator=' '):
+        super().__init__(output=BufferArray(), separator=separator)
 
 
     def dump(self, output):
@@ -108,8 +114,8 @@ class InMemoryWriter(Writer):
 
 
 class FileWriter(Writer):
-    def __init__(self, filename, *args, buffer_size=1024, **kwargs):
-        super().__init__(output=BufferArray(), *args, **kwargs)
+    def __init__(self, filename, separator=' ', buffer_size=1024):
+        super().__init__(output=BufferArray(), separator=separator)
         self.filename = filename
         self.buffer_limit = buffer_size
 

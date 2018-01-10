@@ -195,16 +195,16 @@ class BasicAbstractNeuralNetwork(SeedInitializerMixin):
 
 
     def register_evaluation_datasets(self, validation_dataset, test_dataset=None):
-        def convert_to_onehot(emitter, validation_dataset, test_dataset=None):
-            unwrapped(self.learner).learner.register_validation_dataset(
-                Dataset(validation_dataset.X, validation_dataset.y, self.learner.get_classes())
+        def register(emitter, validation_dataset, test_dataset=None):
+            unwrapped(self.learner).register_validation_dataset(
+                Dataset(validation_dataset.X, validation_dataset.y)
             )
             if test_dataset is not None:
-                unwrapped(self.learner).learner.register_test_dataset(
-                    Dataset(test_dataset.X, test_dataset.y, self.learner.get_classes())
+                unwrapped(self.learner).register_test_dataset(
+                    Dataset(test_dataset.X, test_dataset.y)
                 )
 
-        self.learner.register_event("classes_collected", Event(convert_to_onehot, validation_dataset, test_dataset))
+        self.learner.register_event("fit", Event(register, validation_dataset, test_dataset))
 
 
     def fit(self, X, y):
