@@ -92,6 +92,19 @@ class WrappableNeuralNetwork(object):
         return loss.data[0]
 
 
+    def __epoch(self, epoch_idx):
+        for batch_idx, (batch_X, batch_y) in enumerate(self._data_loader):
+            loss = self.__batch(batch_X, batch_y)
+
+            validation_loss = None
+            test_loss = None
+            if (epoch_idx % (math.ceil(self.n_epochs * 0.05)) == 0) and batch_idx == 0:
+                validation_loss = self.__validation_loss()
+                test_loss = self.__test_loss()
+
+            self.__log(epoch_idx, batch_idx, loss, validation_loss, test_loss)
+
+
     def __validation_loss(self):
         if not self.validation_dataset:
             return None
@@ -108,19 +121,6 @@ class WrappableNeuralNetwork(object):
         test_pred = self.model(self.test_dataset["X"])
         loss = self.loss(test_pred, self.test_dataset["y"])
         return loss.data[0]
-
-
-    def __epoch(self, epoch_idx):
-        for batch_idx, (batch_X, batch_y) in enumerate(self._data_loader):
-            loss = self.__batch(batch_X, batch_y)
-
-            validation_loss = None
-            test_loss = None
-            if (epoch_idx % (math.ceil(self.n_epochs * 0.05)) == 0) and batch_idx == 0:
-                validation_loss = self.__validation_loss()
-                test_loss = self.__test_loss()
-
-            self.__log(epoch_idx, batch_idx, loss, validation_loss, test_loss)
 
 
     def register_validation_dataset(self, validation_dataset):
