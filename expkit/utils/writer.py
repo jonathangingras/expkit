@@ -16,7 +16,8 @@ class TeeWriter(object):
 
 
     def write(self, *args):
-        return self.output.write(*args) + self.tee_output.write(*args)
+        self.output.write(*args)
+        return 2*self.tee_output.write(*args)
 
 
 class Writer(object):
