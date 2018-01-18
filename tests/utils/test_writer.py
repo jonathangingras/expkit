@@ -258,3 +258,43 @@ class FileWriterTest(TestCase):
             content = f.read()
 
         self.assertEqual(self.STR1 + self.STR2 + self.STR3, content)
+
+
+    def test_writer_in_append_mode_doesnt_keep_previous_file_content(self):
+        filename = self.random_filename()
+
+        with open(filename, "w") as f:
+            f.write("not kept content\n")
+            f.flush()
+
+        writer = FileWriter(filename, mode='w')
+
+        writer.write(self.STR1)
+        writer.write(self.STR2)
+        writer.write(self.STR3)
+        writer.flush()
+
+        with open(filename, "r") as f:
+            content = f.readlines()
+
+        self.assertEqual(self.STR1 + self.STR2 + self.STR3, content[0])
+
+
+    def test_writer_in_append_mode_keeps_previous_file_content_intact(self):
+        filename = self.random_filename()
+
+        with open(filename, "w") as f:
+            f.write("kept content\n")
+            f.flush()
+
+        writer = FileWriter(filename, mode='a')
+
+        writer.write(self.STR1)
+        writer.write(self.STR2)
+        writer.write(self.STR3)
+        writer.flush()
+
+        with open(filename, "r") as f:
+            content = f.readlines()
+
+        self.assertEqual("kept content", content[0][:-1])

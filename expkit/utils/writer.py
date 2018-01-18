@@ -114,10 +114,22 @@ class InMemoryWriter(Writer):
 
 
 class FileWriter(Writer):
-    def __init__(self, filename, separator=' ', buffer_size=1024):
+    def __init__(self, filename, separator=' ', buffer_size=1024, mode="w"):
         super().__init__(output=BufferArray(), separator=separator)
         self.filename = filename
         self.buffer_limit = buffer_size
+
+        self._init_file(mode)
+
+
+    def _init_file(self, mode):
+        if mode == "a":
+            return
+        elif mode == "w":
+            with open(self.filename, "w") as f:
+                f.flush()
+        else:
+            raise ValueError("mode must be either 'a' (append) or 'w' (write)")
 
 
     def __del__(self):
