@@ -147,8 +147,8 @@ class WrappableNeuralNetwork(object):
 
 
     def fit(self, X, y):
-        X = torch.from_numpy(np.array(X))
-        y = torch.from_numpy(np.array(y))
+        X = torch.from_numpy(X)
+        y = torch.from_numpy(y)
 
         dataset = torch.utils.data.TensorDataset(X, y)
         self._n_samples = len(dataset)
@@ -183,11 +183,10 @@ class SeedInitializerMixin(object):
 
 
 class BasicAbstractNeuralNetwork(SeedInitializerMixin):
-    def __init__(self, y_dtype=None, seed=None, **kwargs):
+    def __init__(self, seed=None, **kwargs):
         SeedInitializerMixin.__init__(self, seed)
 
         self.learner = LearnerWrapper(WrappableNeuralNetwork, **kwargs)
-        self.y_dtype = y_dtype
 
 
     def get_model(self, input_dim, output_dim):
@@ -214,8 +213,8 @@ class BasicAbstractNeuralNetwork(SeedInitializerMixin):
 
     def predict(self, X):
         return self.learner.predict(X)
-    
-            
+
+
 class AbstractOneHotNeuralNetwork(BasicAbstractNeuralNetwork):
     def __init__(self, *args, y_dtype=None, seed=None, **kwargs):
         SeedInitializerMixin.__init__(self, seed)
@@ -223,8 +222,8 @@ class AbstractOneHotNeuralNetwork(BasicAbstractNeuralNetwork):
         self.learner = OneHotClassifierWrapper(WrappableNeuralNetwork, *args, y_dtype=y_dtype, **kwargs)
         self.validation_dataset = None
         self.y_dtype = y_dtype
-        
-        
+
+
     def register_evaluation_datasets(self, validation_dataset, test_dataset=None):
         def convert_to_onehot(emitter, validation_dataset, test_dataset=None):
             unwrapped(self.learner).learner.register_validation_dataset(Dataset(
