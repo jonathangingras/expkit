@@ -49,3 +49,9 @@ def call_if_callable(obj, *args, **kwargs):
         return obj(*args, **kwargs)
     else:
         return obj
+
+
+def merge_dicts(dict1, dict2=None):
+    if dict2 is not None:
+        dict1.update(dict2)
+    return dict1

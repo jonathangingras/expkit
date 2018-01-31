@@ -1,18 +1,15 @@
-import sys
 import multiprocessing as mp
+import math
+import json
 import numpy as np
 import torch
-import torch.utils.data
 from ..experiment import Dataset
 from .operators import unwrapped
 from .learner import LearnerWrapper, Event
 from .onehot import OneHotClassifierWrapper
 from ..utils.conversion import collect_classes, per_sample_shape, labels_to_one_hots
-from ..utils.arguments import null_function
+from ..utils.arguments import null_function, merge_dicts
 from ..utils.writer import Writer
-from time import sleep
-import math
-import json
 
 
 class WrappableNeuralNetwork(object):
@@ -27,8 +24,10 @@ class WrappableNeuralNetwork(object):
                  n_epochs=200,
                  batch_size=64,
 
-                 n_jobs=-1,
                  log=Writer(),
+                 log_extras=null_function,
+
+                 n_jobs=-1,
                  use_gpu=True):
 
         self.model = model
@@ -38,8 +37,10 @@ class WrappableNeuralNetwork(object):
         self.n_epochs = n_epochs
         self.batch_size = batch_size
 
-        self.workers = n_jobs if n_jobs > 0 else mp.cpu_count()
         self.log = log
+        self.log_extras = log_extras
+
+        self.workers = n_jobs if n_jobs > 0 else mp.cpu_count()
         self.use_gpu = use_gpu
 
         self._n_samples = 0
@@ -72,7 +73,7 @@ class WrappableNeuralNetwork(object):
 
 
     def __log(self, epoch_idx, batch_idx, loss, validation_loss=None, test_loss=None):
-        self.log.write(json.dumps({
+        self.log.write(json.dumps(merge_dicts({
             "epoch": epoch_idx,
             "n_epochs": self.n_epochs,
             "batch": batch_idx,
@@ -80,7 +81,7 @@ class WrappableNeuralNetwork(object):
             "training loss": loss,
             "validation loss": validation_loss,
             "test loss": test_loss,
-        }), '\n')
+        }, self.log_extras(self))), '\n')
 
 
     def __batch(self, batch_X, batch_y):
