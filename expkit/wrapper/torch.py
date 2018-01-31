@@ -3,6 +3,7 @@ import math
 import json
 import numpy as np
 import torch
+import torch.utils
 from ..experiment import Dataset
 from .operators import unwrapped
 from .learner import LearnerWrapper, Event
