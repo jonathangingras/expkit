@@ -12,6 +12,7 @@ from ..utils.arguments import null_function
 from ..utils.writer import Writer
 from time import sleep
 import math
+import json
 
 
 class WrappableNeuralNetwork(object):
@@ -65,17 +66,21 @@ class WrappableNeuralNetwork(object):
         return data.numpy()
 
 
+    @property
+    def n_batches(self):
+        return int(self._n_samples/self.batch_size)
+
+
     def __log(self, epoch_idx, batch_idx, loss, validation_loss=None, test_loss=None):
-        self.log.write(r'{',
-                       '"epoch": {}, "n_epochs": {}, "batch": {}, "n_batches": {}, "training loss": {}{}{}'.format(
-                           epoch_idx,
-                           self.n_epochs,
-                           batch_idx,
-                           int(self._n_samples/self.batch_size),
-                           loss,
-                           ', "validation loss": {}'.format(validation_loss) if validation_loss is not None else "",
-                           ', "test loss": {}'.format(test_loss) if test_loss is not None else ""),
-                       r'}', '\n')
+        self.log.write(json.dumps({
+            "epoch": epoch_idx,
+            "n_epochs": self.n_epochs,
+            "batch": batch_idx,
+            "n_batches": self.n_batches,
+            "training loss": loss,
+            "validation loss": validation_loss,
+            "test loss": test_loss,
+        }), '\n')
 
 
     def __batch(self, batch_X, batch_y):
