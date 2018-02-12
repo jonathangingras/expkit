@@ -178,11 +178,10 @@ class WrappableNeuralNetwork(object):
         return self.__to_numpy(pred)
 
 
-class SeedInitializerMixin(object):
-    def __init__(self, seed=None):
+class BasicAbstractNeuralNetwork(object):
+    def __init__(self, seed=None, **kwargs):
         self.seed = seed
-
-        self.init_seed()
+        self.learner = LearnerWrapper(WrappableNeuralNetwork, **kwargs)
 
 
     def init_seed(self):
@@ -191,19 +190,12 @@ class SeedInitializerMixin(object):
             torch.manual_seed(self.seed)
 
 
-class BasicAbstractNeuralNetwork(SeedInitializerMixin):
-    def __init__(self, seed=None, **kwargs):
-        SeedInitializerMixin.__init__(self, seed)
-
-        self.learner = LearnerWrapper(WrappableNeuralNetwork, **kwargs)
-
-
     def get_model(self, input_dim, output_dim):
         raise RuntimeError("no get_model method overridden")
 
 
     def register_evaluation_datasets(self, validation_dataset, test_dataset=None):
-        def register(emitter, validation_dataset, test_dataset=None):
+        def register(_, validation_dataset, test_dataset=None):
             unwrapped(self.learner).register_validation_dataset(
                 Dataset(validation_dataset.X, validation_dataset.y)
             )
@@ -216,6 +208,7 @@ class BasicAbstractNeuralNetwork(SeedInitializerMixin):
 
 
     def fit(self, X, y):
+        self.init_seed()
         self.learner.instantiate_estimator(model=self.get_model(per_sample_shape(X), len(collect_classes(y))))
         return self.learner.fit(X, y)
 
@@ -226,15 +219,14 @@ class BasicAbstractNeuralNetwork(SeedInitializerMixin):
 
 class AbstractOneHotNeuralNetwork(BasicAbstractNeuralNetwork):
     def __init__(self, *args, y_dtype=None, seed=None, **kwargs):
-        SeedInitializerMixin.__init__(self, seed)
-
+        self.seed = seed
         self.learner = OneHotClassifierWrapper(WrappableNeuralNetwork, *args, y_dtype=y_dtype, **kwargs)
         self.validation_dataset = None
         self.y_dtype = y_dtype
 
 
     def register_evaluation_datasets(self, validation_dataset, test_dataset=None):
-        def convert_to_onehot(emitter, validation_dataset, test_dataset=None):
+        def convert_to_onehot(_, validation_dataset, test_dataset=None):
             unwrapped(self.learner).learner.register_validation_dataset(Dataset(
                 validation_dataset.X,
                 labels_to_one_hots(validation_dataset.y, self.learner.get_classes(), dtype=self.y_dtype)

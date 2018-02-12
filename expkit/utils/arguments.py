@@ -1,4 +1,6 @@
 from sklearn.model_selection import GridSearchCV
+import numpy as np
+import pandas as pd
 
 
 class star_wrap(object):
@@ -55,3 +57,12 @@ def merge_dicts(dict1, dict2=None):
     if dict2 is not None:
         dict1.update(dict2)
     return dict1
+
+
+def input_dimensions(array):
+    if str(array.__class__).startswith(".numpy") or str(array.__class__).startswith("pandas."):
+        return array.shape
+    elif str(array.__class__).startswith(".torch"):
+        return array.size()
+    elif isinstance(array, list) or isinstance(array, tuple):
+        return [len(array)]
