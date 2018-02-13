@@ -132,11 +132,21 @@ class FileWriter(Writer):
             raise ValueError("mode must be either 'a' (append) or 'w' (write)")
 
 
+    def __enter__(self):
+        return self
+
+
+    def __exit__(self, type, value, tb):
+        self.flush()
+
+
     def __del__(self):
         self.flush()
 
 
     def flush(self):
+        if len(self.output) == 0:
+            return
         with open(self.filename, "a") as f:
             self.output.dump(f)
         self.output.clear()
