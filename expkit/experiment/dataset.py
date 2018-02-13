@@ -1,6 +1,56 @@
 import numpy as np
 
 
+def arrays_have_same_length(*arrays):
+    return len(arrays) == list(map(len, arrays)).count(len(arrays[0]))
+
+
+def shuffle_arrays(*arrays, seed=None):
+    random_state = np.random.RandomState(seed)
+    permutations = random_state.permutation(len(arrays[0]))
+
+    if not arrays_have_same_length(*arrays):
+        raise RuntimeError("arrays are not all of the same length")
+
+    for i in range(len(arrays)):
+        np.take(arrays[i], permutations, axis=0, out=arrays[i])
+
+    if len(arrays) == 1:
+        return arrays[0]
+    else:
+        return arrays
+
+
+def split_arrays_by_amounts(amount1, amount2, *arrays):
+    if not arrays_have_same_length(*arrays):
+        raise RuntimeError("arrays are not all of the same length")
+    if len(arrays[0]) != amount1 + amount2:
+        raise RuntimeError("splitting by amounts require the two amounts to sum to original length")
+
+    def split_array(array):
+        return (array[:amount1], array[amount1:])
+
+    if len(arrays) == 1:
+        return split_array(arrays[0])
+    else:
+        return tuple(map(split_array, arrays))
+
+
+def amounts_from_ratio(ratio, total):
+    amount1 = round(ratio * total)
+    amount2 = total - amount1
+    return amount1, amount2
+
+
+def split_arrays_by_ratio(ratio, *arrays):
+    if not arrays_have_same_length(*arrays):
+        raise RuntimeError("arrays are not all of the same length")
+
+    amount1, amount2 = amounts_from_ratio(ratio, len(arrays[0]))
+
+    return split_arrays_by_amounts(amount1, amount2, *arrays)
+
+
 class Dataset(object):
     def __init__(self, X, y, feature_names=None, copy=True, X_dtype=None, y_dtype=None):
         if len(X) != len(y):
@@ -44,18 +94,15 @@ class Dataset(object):
 
 
     def split_by_ratio(self, ratio):
-        amount1 = int(ratio * len(self.X))
-        amount2 = len(self.X) - amount1
+        amount1, amount2 = amounts_from_ratio(ratio, len(self.y))
 
         return self.split_by_amounts(amount1, amount2)
 
 
     def split_by_amounts(self, amount1, amount2):
-        if len(self.X) != amount1 + amount2:
-            raise RuntimeError("splitting by amounts require the two amounts to sum to original length")
-
-        return (Dataset(self.X[:amount1], self.y[:amount1], self.feature_names),
-                Dataset(self.X[amount1:], self.y[amount1:], self.feature_names))
+        (X0, X1), (y0, y1) = split_arrays_by_amounts(amount1, amount2, self.X, self.y)
+        return (Dataset(X0, y0, self.feature_names),
+                Dataset(X1, y1, self.feature_names))
 
 
 class DatasetAbstractSplitMixin(object):
