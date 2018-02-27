@@ -15,20 +15,19 @@ from ..utils.arguments import null_function, merge_dicts
 from ..utils.writer import Writer
 
 
-class WrappableNeuralNetwork(object):
+class NeuralNetwork(object):
     def __init__(self,
                  model,
                  loss_function_class,
                  optimizer_class,
-
                  loss_function_params={},
                  optimizer_params={'lr': 0.1},
 
                  n_epochs=200,
                  batch_size=64,
 
-                 log=Writer(),
-                 log_extras=null_function,
+                 log=None,
+                 callbacks={},
 
                  n_jobs=-1,
                  use_gpu=True):
@@ -40,8 +39,7 @@ class WrappableNeuralNetwork(object):
         self.n_epochs = n_epochs
         self.batch_size = batch_size
 
-        self.log = log
-        self.log_extras = log_extras
+        self.log = log if log is not None else Writer()
 
         self.workers = n_jobs if n_jobs > 0 else mp.cpu_count()
         self.use_gpu = use_gpu
@@ -51,6 +49,18 @@ class WrappableNeuralNetwork(object):
 
         if self.use_gpu:
             self.model = self.model.cuda()
+
+        self.callbacks = {
+            "before_epoch": null_function,
+            "after_epoch": null_function,
+            "before_batch": null_function,
+            "after_batch": null_function,
+            "before_fit": null_function,
+            "after_fit": null_function,
+            "log_extras": null_function,
+        }
+
+        self.callbacks.update(callbacks)
 
         self.validation_dataset = None
         self.test_dataset = None
@@ -84,11 +94,13 @@ class WrappableNeuralNetwork(object):
             "training loss": loss,
             "validation loss": validation_loss,
             "test loss": test_loss,
-        }, self.log_extras(self))), '\n')
+        }, self.callbacks["log_extras"](self))), '\n')
 
 
-    def __batch(self, batch_X, batch_y):
+    def __batch(self, epoch_idx, batch_idx, batch_X, batch_y):
         batch_X, batch_y = self.__to_variable(batch_X), self.__to_variable(batch_y)
+
+        self.callbacks["before_batch"](self, epoch_idx, batch_idx, batch_X, batch_y)
 
         y_pred = self.model(batch_X)
 
@@ -98,12 +110,16 @@ class WrappableNeuralNetwork(object):
         loss.backward()
         self.optimizer.step()
 
+        self.callbacks["after_batch"](self, epoch_idx, batch_idx, loss)
+
         return loss.data[0]
 
 
     def __epoch(self, epoch_idx):
+        self.callbacks["before_epoch"](self, epoch_idx)
+
         for batch_idx, (batch_X, batch_y) in enumerate(self._data_loader):
-            loss = self.__batch(batch_X, batch_y)
+            loss = self.__batch(epoch_idx, batch_idx, batch_X, batch_y)
 
             validation_loss = None
             test_loss = None
@@ -112,6 +128,8 @@ class WrappableNeuralNetwork(object):
                 test_loss = self.__test_loss()
 
             self.__log(epoch_idx, batch_idx, loss, validation_loss, test_loss)
+
+        self.callbacks["after_epoch"](self, epoch_idx)
 
 
     def __validation_loss(self):
@@ -159,6 +177,8 @@ class WrappableNeuralNetwork(object):
         X = torch.from_numpy(X)
         y = torch.from_numpy(y)
 
+        self.callbacks["before_fit"](self, X, y)
+
         dataset = torch.utils.data.TensorDataset(X, y)
         self._n_samples = len(dataset)
 
@@ -169,6 +189,8 @@ class WrappableNeuralNetwork(object):
         for epoch_idx in range(self.n_epochs):
             self.__epoch(epoch_idx)
 
+        self.callbacks["after_fit"](self)
+
 
     def predict(self, X):
         X = torch.from_numpy(np.array(X))
@@ -178,10 +200,10 @@ class WrappableNeuralNetwork(object):
         return self.__to_numpy(pred)
 
 
-class BasicAbstractNeuralNetwork(object):
+class NeuralNetworkMixin(object):
     def __init__(self, seed=None, **kwargs):
         self.seed = seed
-        self.learner = LearnerWrapper(WrappableNeuralNetwork, **kwargs)
+        self.learner = LearnerWrapper(NeuralNetwork, **kwargs)
 
 
     def init_seed(self):
@@ -190,8 +212,8 @@ class BasicAbstractNeuralNetwork(object):
             torch.manual_seed(self.seed)
 
 
-    def get_model(self, input_dim, output_dim):
-        raise RuntimeError("no get_model method overridden")
+    def create_model(self, input_dim, output_dim):
+        raise RuntimeError("no create_model method overridden")
 
 
     def register_evaluation_datasets(self, validation_dataset, test_dataset=None):
@@ -207,20 +229,21 @@ class BasicAbstractNeuralNetwork(object):
         self.learner.register_event("fit", Event(register, validation_dataset, test_dataset))
 
 
-    def fit(self, X, y):
-        self.init_seed()
-        self.learner.instantiate_estimator(model=self.get_model(per_sample_shape(X), len(collect_classes(y))))
-        return self.learner.fit(X, y)
-
-
     def predict(self, X):
         return self.learner.predict(X)
 
 
-class AbstractOneHotNeuralNetwork(BasicAbstractNeuralNetwork):
+class ClassificationNeuralNetworkMixin(NeuralNetworkMixin):
+    def fit(self, X, y):
+        self.init_seed()
+        self.learner.instantiate_estimator(model=self.create_model(per_sample_shape(X), len(collect_classes(y))))
+        return self.learner.fit(X, y)
+
+
+class AbstractOneHotNeuralNetwork(ClassificationNeuralNetworkMixin):
     def __init__(self, *args, y_dtype=None, seed=None, **kwargs):
         self.seed = seed
-        self.learner = OneHotClassifierWrapper(WrappableNeuralNetwork, *args, y_dtype=y_dtype, **kwargs)
+        self.learner = OneHotClassifierWrapper(NeuralNetwork, *args, y_dtype=y_dtype, **kwargs)
         self.validation_dataset = None
         self.y_dtype = y_dtype
 
