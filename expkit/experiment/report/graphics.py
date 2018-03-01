@@ -2,7 +2,7 @@ import os
 import pickle as pkl
 import matplotlib.pyplot as plt
 from ...graphics.confusion_matrix import plot_binary_confusion_matrix
-from ...utils.graphics import save_to_pdf
+from ...graphics.pdf import save_to_pdf
 import numpy as np
 
 
