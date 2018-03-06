@@ -13,6 +13,7 @@ def show(pyplot_code, magic_arg="inline", fallback_filename=None, save_anyways=F
 
     if magic_available():
         get_ipython().magic("matplotlib {}".format(magic_arg))
+        pyplot_code(*args, **kwargs)
         if save_anyways:
             save_pdf()
             return
