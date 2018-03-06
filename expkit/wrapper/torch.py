@@ -20,8 +20,11 @@ class NeuralNetwork(object):
                  model,
                  loss_function_class,
                  optimizer_class,
+                 lr_scheduler_class=None,
+
                  loss_function_params={},
                  optimizer_params={'lr': 0.1},
+                 lr_scheduler_params={},
 
                  n_epochs=200,
                  batch_size=64,
@@ -35,6 +38,10 @@ class NeuralNetwork(object):
         self.model = model
         self.loss = loss_function_class(**loss_function_params)
         self.optimizer = optimizer_class(self.model.parameters(), **optimizer_params)
+        if lr_scheduler_class is not None:
+            self.lr_scheduler = lr_scheduler_class(optimizer=self.optimizer, **lr_scheduler_params)
+        else:
+            self.lr_scheduler = None
 
         self.n_epochs = n_epochs
         self.batch_size = batch_size
@@ -117,6 +124,9 @@ class NeuralNetwork(object):
 
     def __epoch(self, epoch_idx):
         self.callbacks["before_epoch"](self, epoch_idx)
+
+        if self.lr_scheduler is not None:
+            self.lr_scheduler.step()
 
         for batch_idx, (batch_X, batch_y) in enumerate(self._data_loader):
             loss = self.__batch(epoch_idx, batch_idx, batch_X, batch_y)
