@@ -29,6 +29,8 @@ class NeuralNetwork(object):
                  n_epochs=200,
                  batch_size=64,
 
+                 n_output='auto',
+
                  log=None,
                  callbacks={},
 
@@ -45,6 +47,7 @@ class NeuralNetwork(object):
 
         self.n_epochs = n_epochs
         self.batch_size = batch_size
+        self.n_output = n_output
 
         self.log = log if log is not None else Writer()
 
@@ -243,14 +246,33 @@ class NeuralNetworkMixin(object):
         return self.learner.predict(X)
 
 
-class ClassificationNeuralNetworkMixin(NeuralNetworkMixin):
+class SingleOutputNeuralNetworkMixin(NeuralNetworkMixin):
     def fit(self, X, y):
         self.init_seed()
-        self.learner.instantiate_estimator(model=self.create_model(per_sample_shape(X), len(collect_classes(y))))
+
+        self.learner.instantiate_estimator(model=self.create_model(per_sample_shape(X), 1))
+
         return self.learner.fit(X, y)
 
 
-class AbstractOneHotNeuralNetwork(ClassificationNeuralNetworkMixin):
+class MultiOutputNeuralNetworkMixin(NeuralNetworkMixin):
+    def fit(self, X, y):
+        if self.n_output == 'auto':
+            n_output = len(collect_classes(y))
+        else:
+            if isinstance(self.n_output, int):
+                n_output = self.n_output
+            else:
+                n_output = self.n_output(X, y)
+
+        self.init_seed()
+
+        self.learner.instantiate_estimator(model=self.create_model(per_sample_shape(X), n_output))
+
+        return self.learner.fit(X, y)
+
+
+class AbstractOneHotNeuralNetwork(MultiOutputNeuralNetworkMixin):
     def __init__(self, *args, y_dtype=None, seed=None, **kwargs):
         self.seed = seed
         self.learner = OneHotClassifierWrapper(NeuralNetwork, *args, y_dtype=y_dtype, **kwargs)
