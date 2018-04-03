@@ -1,3 +1,4 @@
+from . import no_display_magic
 import os
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
