@@ -6,7 +6,7 @@ def magic_available():
     return get_ipython() != None
 
 
-def show(pyplot_code, magic_arg="inline", fallback_filename=None, save_anyways=False, *args, **kwargs):
+def show(pyplot_code, *args, magic_arg="inline", fallback_filename=None, save_anyways=False, **kwargs):
     def save_pdf():
         if fallback_filename:
             save_to_pdf(fallback_filename, pyplot_code, *args, **kwargs)
